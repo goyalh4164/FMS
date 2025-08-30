@@ -1,4 +1,5 @@
 import styles from "../RetailInputCard.module.css";
+import Spinner from "@/components/LoadingSpinner/SmallSpinner/SmallSpinner";
 
 function SelectInput({ id, label, options }) {
   return (
@@ -15,6 +16,9 @@ function SelectInput({ id, label, options }) {
             </option>
           ))}
         </select>
+        <Spinner />
+      </div>
+      <div>
       </div>
     </div>
   );
