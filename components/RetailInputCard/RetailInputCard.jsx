@@ -1,12 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SelectInput from "./SelectInput/SelectInput";
 import RadioGroup from "./RadioGroup/RadioGroup";
 import TextInput from "./TextInput/TextInput";
 import styles from "./RetailInputCard.module.css";
 
-// ✅ Main Card Component
-export default function RetailInputCard({ Heading = "Default Heading" }) {
+export default function RetailInputCard({ Heading = "Default Heading", index, onDataChange }) {
   const [branch, setBranch] = useState("");
   const [chipset, setChipset] = useState("");
   const [swModel, setSwModel] = useState("");
@@ -16,33 +15,24 @@ export default function RetailInputCard({ Heading = "Default Heading" }) {
   const [loadingChipset, setLoadingChipset] = useState(false);
   const [loadingSWModel, setLoadingSWModel] = useState(false);
 
-  // 👉 Branch onBlur → show spinner for chipset
   const handleBranchBlur = (value) => {
     setBranch(value);
     setLoadingChipset(true);
-    setChipset(""); // reset chipset
-    setSwModel(""); // reset sw model
-    setTimeout(() => {
-      setLoadingChipset(false);
-    }, 1500); // simulate API call
+    setChipset("");
+    setSwModel("");
+    setTimeout(() => setLoadingChipset(false), 1500);
   };
 
-  // 👉 Chipset onChange → show spinner for S/W model
   const handleChipsetChange = (value) => {
     setChipset(value);
     setLoadingSWModel(true);
-    setSwModel(""); // reset sw model
-    setTimeout(() => {
-      setLoadingSWModel(false);
-    }, 1500);
+    setSwModel("");
+    setTimeout(() => setLoadingSWModel(false), 1500);
   };
 
-  // 👉 SW Model change
-  const handleSWModelChange = (value) => {
-    setSwModel(value);
-  };
+  const handleSWModelChange = (value) => setSwModel(value);
 
-  // 👉 Final Card Data
+  // Final Card Data
   const cardData = {
     branch,
     chipset,
@@ -51,22 +41,27 @@ export default function RetailInputCard({ Heading = "Default Heading" }) {
     changelistNumber: changelistType === "specific" ? changelistNumber : null,
   };
 
+  // Notify parent whenever cardData changes
+  useEffect(() => {
+    onDataChange?.(index, cardData);
+  }, [branch, chipset, swModel, changelistType, changelistNumber]);
+
   return (
     <div className={styles.container}>
       <div className={styles.heading_container}>
         <h1>{Heading}</h1>
       </div>
+
       <TextInput
-        id="branch-path"
+        id={`branch-path-${index}`}
         label="Branch"
         placeholder="Enter Branch"
         defaultValue={branch}
         onBlur={handleBranchBlur}
       />
 
-      {/* Chipset Dropdown */}
       <SelectInput
-        id="chipset"
+        id={`chipset-${index}`}
         label="Chipset"
         value={chipset}
         onChange={handleChipsetChange}
@@ -79,9 +74,8 @@ export default function RetailInputCard({ Heading = "Default Heading" }) {
         ]}
       />
 
-      {/* SW Model Dropdown */}
       <SelectInput
-        id="sw-model"
+        id={`sw-model-${index}`}
         label="S/W Model"
         value={swModel}
         onChange={handleSWModelChange}
@@ -94,38 +88,25 @@ export default function RetailInputCard({ Heading = "Default Heading" }) {
         ]}
       />
 
-      {/* Radio Buttons */}
       <RadioGroup
-        name="changelist"
+        name={`changelist-${index}`}
         value={changelistType}
         onChange={setChangelistType}
         options={[
-          { id: "latest-cl", label: "Latest Changelist", value: "latest" },
-          {
-            id: "specific-cl",
-            label: "Specific Changelist",
-            value: "specific",
-          },
+          { id: `latest-cl-${index}`, label: "Latest Changelist", value: "latest" },
+          { id: `specific-cl-${index}`, label: "Specific Changelist", value: "specific" },
         ]}
       />
 
-      {/* Conditional Changelist Input */}
       {changelistType === "specific" && (
         <TextInput
-          id="changelist-number"
+          id={`changelist-number-${index}`}
           label="Changelist"
           placeholder="Enter Changelist"
           value={changelistNumber}
           onChange={setChangelistNumber}
         />
       )}
-
-      {/* Debug output (Final Card Data) */}
-      <pre
-        style={{ marginTop: "20px", background: "#f9f9f9", padding: "10px" }}
-      >
-        {JSON.stringify(cardData, null, 2)}
-      </pre>
     </div>
   );
 }
