@@ -1,6 +1,7 @@
 import ToolDescriptionCard from "@/components/ToolDescriptionCard/ToolDescriptionCard";
 import styles from "./page.module.css";
 export default function Home() {
+  
   const ToolsData = [
     {
       Heading: "Welcome to FMS tool",
@@ -11,6 +12,7 @@ export default function Home() {
       Description: "This tool helps you do something else.",
     },
   ];
+
   return (
     <div className={styles.container}>
       <div className={styles.title_container}>
