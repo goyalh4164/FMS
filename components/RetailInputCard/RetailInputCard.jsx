@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
-import SelectInput from "./SelectInput/SelectInput";
-import RadioGroup from "./RadioGroup/RadioGroup";
-import TextInput from "./TextInput/TextInput";
+import SelectInput from "../SelectInput/SelectInput";
+import RadioGroup from "../RadioGroup/RadioGroup";
+import TextInput from "../TextInput/TextInput";
 import styles from "./RetailInputCard.module.css";
 import SmoothWrapper from "../SmoothWrapper/SmoothWrapper";
 

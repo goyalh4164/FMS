@@ -1,4 +1,4 @@
-import styles from "../RetailInputCard.module.css";
+import styles from "./RadioGroup.module.css"
 
 function RadioGroup({ name, options, value, onChange }) {
   return (

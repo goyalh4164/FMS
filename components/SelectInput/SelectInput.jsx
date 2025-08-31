@@ -1,4 +1,4 @@
-import styles from "../RetailInputCard.module.css";
+import styles from "./SelectInput.module.css";
 import SmallSpinner from "@/components/LoadingSpinner/SmallSpinner/SmallSpinner";
 
 // ✅ Select Input with Spinner + Disabled State
