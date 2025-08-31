@@ -1,0 +1,12 @@
+.wrapper {
+  max-height: 0;
+  opacity: 0.7;
+  overflow: hidden;
+  transition: all 0.7s ease-in-out;
+}
+
+/* When show = true */
+.show {
+  max-height: 500px; /* adjust based on expected content size */
+  opacity: 1;
+}

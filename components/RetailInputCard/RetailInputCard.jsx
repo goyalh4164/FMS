@@ -4,8 +4,13 @@ import SelectInput from "./SelectInput/SelectInput";
 import RadioGroup from "./RadioGroup/RadioGroup";
 import TextInput from "./TextInput/TextInput";
 import styles from "./RetailInputCard.module.css";
+import SmoothWrapper from "../SmoothWrapper/SmoothWrapper";
 
-export default function RetailInputCard({ Heading = "Default Heading", index, onDataChange }) {
+export default function RetailInputCard({
+  Heading = "Default Heading",
+  index,
+  onDataChange,
+}) {
   const [branch, setBranch] = useState("");
   const [chipset, setChipset] = useState("");
   const [swModel, setSwModel] = useState("");
@@ -93,19 +98,29 @@ export default function RetailInputCard({ Heading = "Default Heading", index, on
         value={changelistType}
         onChange={setChangelistType}
         options={[
-          { id: `latest-cl-${index}`, label: "Latest Changelist", value: "latest" },
-          { id: `specific-cl-${index}`, label: "Specific Changelist", value: "specific" },
+          {
+            id: `latest-cl-${index}`,
+            label: "Latest Changelist",
+            value: "latest",
+          },
+          {
+            id: `specific-cl-${index}`,
+            label: "Specific Changelist",
+            value: "specific",
+          },
         ]}
       />
 
-      {changelistType === "specific" && (
-        <TextInput
-          id={`changelist-number-${index}`}
-          label="Changelist"
-          placeholder="Enter Changelist"
-          value={changelistNumber}
-          onChange={setChangelistNumber}
-        />
+      {(
+        <SmoothWrapper show={changelistType === "specific"}>
+          <TextInput
+            id={`changelist-number-${index}`}
+            label="Changelist"
+            placeholder="Enter Changelist"
+            value={changelistNumber}
+            onChange={setChangelistNumber}
+          />
+        </SmoothWrapper>
       )}
     </div>
   );
