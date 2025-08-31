@@ -7,7 +7,7 @@ import styles from "./RetailInputCard.module.css";
 import SmoothWrapper from "../SmoothWrapper/SmoothWrapper";
 
 export default function RetailInputCard({
-  Heading = "Default Heading",
+  Heading,
   index,
   onDataChange,
 }) {
