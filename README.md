@@ -2,7 +2,6 @@
 // import { DataRows as Data } from "@/utils/Data";
 
 import {
-  createColumnHelper,
   useReactTable,
   getCoreRowModel,
   flexRender,
@@ -38,24 +37,29 @@ export default function Table() {
   console.log("column_heading : ", column_heading, "Data : ", Data);
   const [globalFilter, setGlobalFilter] = useState("");
 
+  
   const columns = [];
-
   for (let i = 0; i < column_heading.length; i++) {
-    let obj = {};
-    obj.accessorKey = column_heading[i];
-    obj.header = column_heading[i];
-    columns.push(obj);
+    columns.push({
+      accessorKey: column_heading[i],
+      header: column_heading[i],
+    });
   }
+
+  const firstColumnId = column_heading[0]; 
 
   const table = useReactTable({
     data: Data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     state: {
       globalFilter,
+      columnPinning: {
+        left: [firstColumnId], 
+      },
     },
     onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
   });
 
   const handleDownloadExcel = async () => {
@@ -86,6 +90,7 @@ export default function Table() {
   return (
     <div style={{ overflowX: "auto"}}>
       <VisitTracker page={"result"} />
+      {/* fix this part on the screen */}
       <div className="key_Point_Container">
         {model1Path && (
           <KeyPoint mainPoint="Model 1 Path " description={model1Path} />
@@ -95,8 +100,8 @@ export default function Table() {
         )}
         {
           <KeyPoint
-            mainPoint="Model 1 CL "
-            description={model1CL == 0 ? "Latest" : model1CL}
+          mainPoint="Model 1 CL "
+          description={model1CL == 0 ? "Latest" : model1CL}
           />
         }
         {model2Path && (
@@ -107,8 +112,8 @@ export default function Table() {
         )}
         {model2CL != null && (
           <KeyPoint
-            mainPoint="Model 2 CL "
-            description={model2CL == 0 ? "Latest" : model2CL}
+          mainPoint="Model 2 CL "
+          description={model2CL == 0 ? "Latest" : model2CL}
           />
         )}
         {prefix && <KeyPoint mainPoint="Prefix " description={prefix} />}
@@ -122,52 +127,64 @@ export default function Table() {
           value={globalFilter ?? ""}
           onChange={(e) => setGlobalFilter(String(e.target.value))}
           placeholder="Search FMS KEY..."
-        />
+          />
         <div>
           <CardButton label={"Download Excel"} buttonColor={"green"} onClick={handleDownloadExcel} />
         </div>
       </div>
+      {/* fix this part on the screen */}
 
       <table
         style={{
           borderCollapse: "collapse",
           width: "100%",
+          minWidth: "1000px",
           fontFamily: "sans-serif",
           fontSize: "14px",
-          backgroundColor:"white"
+          backgroundColor: "white",
         }}
       >
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  style={{
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                    textAlign: "left",
-                    backgroundColor: "#f9f9f9",
-                  }}
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
-                </th>
-              ))}
+              {headerGroup.headers.map((header) => {
+                const isPinned = header.column.getIsPinned();
+
+                return (
+                  <th
+                    key={header.id}
+                    style={{
+                      border: "1px solid #ccc",
+                      padding: "8px",
+                      textAlign: "left",
+                      backgroundColor: "#f9f9f9",
+                      position: isPinned ? "sticky" : "static",
+                      left: isPinned ? 0 : undefined,
+                      zIndex: isPinned ? 3 : 1,
+                    }}
+                  >
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                  </th>
+                );
+              })}
             </tr>
           ))}
         </thead>
+
         <tbody>
           {table.getRowModel().rows.map((row) => (
             <tr key={row.id}>
               {row.getVisibleCells().map((cell) => {
-                const overrideColor = row.original.colors.includes(
+                const isPinned = cell.column.getIsPinned();
+
+                const overrideColor = row.original.colors?.includes(
                   cell.column.id
                 )
                   ? "lightpink"
-                  : "light-red";
+                  : "white";
 
                 return (
                   <td
@@ -176,9 +193,15 @@ export default function Table() {
                       border: "1px solid #ddd",
                       padding: "8px",
                       backgroundColor: overrideColor,
+                      position: isPinned ? "sticky" : "static",
+                      left: isPinned ? 0 : undefined,
+                      zIndex: isPinned ? 2 : 1,
                     }}
                   >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    {flexRender(
+                      cell.column.columnDef.cell,
+                      cell.getContext()
+                    )}
                   </td>
                 );
               })}
