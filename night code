@@ -1,0 +1,196 @@
+"use client";
+
+import { useState } from "react";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  flexRender,
+} from "@tanstack/react-table";
+import axios from "axios";
+
+import styles from "./page.module.css";
+import { useUser } from "../context/UserContext";
+import KeyPoint from "@/components/KeyPoint/KeyPoint";
+import CardButton from "@/components/CardButton/CardButton";
+import VisitTracker from "@/components/VisitTracker/VisitTracker";
+import { root } from "@/server-config";
+
+export default function Table() {
+  const {
+    excelDownloadPath,
+    fmsTable,
+    model1CL,
+    model2CL,
+  } = useUser();
+
+  const { HEADERS: column_heading, DATA_ROWS_AFTER_COLORING: Data } = fmsTable;
+
+  const firstColumnId = column_heading[0];
+
+  // ✅ column filter state (NOT global)
+  const [columnFilters, setColumnFilters] = useState([]);
+
+  const columns = column_heading.map((col) => ({
+    accessorKey: col,
+    header: col,
+  }));
+
+  const table = useReactTable({
+    data: Data,
+    columns,
+    state: {
+      columnFilters,
+      columnPinning: { left: [firstColumnId] },
+    },
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
+
+  const handleDownloadExcel = async () => {
+    const query = `${root}/getFile?path=${excelDownloadPath}`;
+    const response = await axios.get(query, { responseType: "blob" });
+
+    const filename = excelDownloadPath.split("/").pop() || "data.xlsx";
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  // 🔑 value from first column filter
+  const firstColumnFilterValue =
+    table.getColumn(firstColumnId)?.getFilterValue() ?? "";
+
+  return (
+    <div>
+      <VisitTracker page="result" />
+
+      {/* ===== STICKY BAR (UNCHANGED POSITION) ===== */}
+      <div
+        style={{
+          position: "sticky",
+          bottom: 0,
+          background: "#fff",
+          borderTop: "1px solid #ddd",
+          padding: "10px 16px",
+          display: "flex",
+          gap: "12px",
+          alignItems: "center",
+          zIndex: 5,
+        }}
+      >
+        {model1CL != null && (
+          <KeyPoint
+            mainPoint="Model 1 CL"
+            description={model1CL === 0 ? "Latest" : model1CL}
+          />
+        )}
+
+        {model2CL != null && (
+          <KeyPoint
+            mainPoint="Model 2 CL"
+            description={model2CL === 0 ? "Latest" : model2CL}
+          />
+        )}
+
+        {/* ✅ FILTER ONLY FIRST COLUMN */}
+        <input
+          className={styles.searchInput}
+          value={firstColumnFilterValue}
+          onChange={(e) =>
+            table.getColumn(firstColumnId)?.setFilterValue(e.target.value)
+          }
+          placeholder={`Search ${firstColumnId}...`}
+          style={{ flex: 1 }}
+        />
+
+        <CardButton
+          label="Download Excel"
+          buttonColor="green"
+          onClick={handleDownloadExcel}
+        />
+      </div>
+
+      {/* ===== TABLE (UNTOUCHED) ===== */}
+      <div style={{ overflowX: "auto" }}>
+        <table
+          style={{
+            borderCollapse: "collapse",
+            width: "100%",
+            minWidth: "1000px",
+            fontFamily: "sans-serif",
+            fontSize: "14px",
+            backgroundColor: "white",
+          }}
+        >
+          <thead>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  const isPinned = header.column.getIsPinned();
+                  return (
+                    <th
+                      key={header.id}
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#f9f9f9",
+                        position: isPinned ? "sticky" : "static",
+                        left: isPinned ? 0 : undefined,
+                        zIndex: isPinned ? 3 : 1,
+                      }}
+                    >
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
+          </thead>
+
+          <tbody>
+            {table.getRowModel().rows.map((row) => (
+              <tr key={row.id}>
+                {row.getVisibleCells().map((cell) => {
+                  const isPinned = cell.column.getIsPinned();
+                  const overrideColor =
+                    row.original?.colors?.includes(cell.column.id)
+                      ? "lightpink"
+                      : "white";
+
+                  return (
+                    <td
+                      key={cell.id}
+                      style={{
+                        border: "1px solid #ddd",
+                        padding: "8px",
+                        backgroundColor: overrideColor,
+                        position: isPinned ? "sticky" : "static",
+                        left: isPinned ? 0 : undefined,
+                        zIndex: isPinned ? 2 : 1,
+                      }}
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
