@@ -1,61 +1,46 @@
 "use client";
-// import { DataRows as Data } from "@/utils/Data";
 
+import { useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
-  flexRender,
   getFilteredRowModel,
+  flexRender,
 } from "@tanstack/react-table";
+import axios from "axios";
 
-// import { headers as column_heading } from "@/utils/Data";
-import { useState } from "react";
 import styles from "./page.module.css";
 import { useUser } from "../context/UserContext";
 import KeyPoint from "@/components/KeyPoint/KeyPoint";
 import CardButton from "@/components/CardButton/CardButton";
-import axios from "axios";
-import { root } from "@/server-config";
 import VisitTracker from "@/components/VisitTracker/VisitTracker";
+import { root } from "@/server-config";
 
 export default function Table() {
   const {
     excelDownloadPath,
     fmsTable,
-    model1Path,
-    model1SW,
     model1CL,
-    model2Path,
-    model2SW,
     model2CL,
-    prefix,
-    reference,
   } = useUser();
 
   const { HEADERS: column_heading, DATA_ROWS_AFTER_COLORING: Data } = fmsTable;
-  console.log(excelDownloadPath);
-  console.log("column_heading : ", column_heading, "Data : ", Data);
+
   const [globalFilter, setGlobalFilter] = useState("");
 
-  
-  const columns = [];
-  for (let i = 0; i < column_heading.length; i++) {
-    columns.push({
-      accessorKey: column_heading[i],
-      header: column_heading[i],
-    });
-  }
+  const columns = column_heading.map((col) => ({
+    accessorKey: col,
+    header: col,
+  }));
 
-  const firstColumnId = column_heading[0]; 
+  const firstColumnId = column_heading[0];
 
   const table = useReactTable({
     data: Data,
     columns,
     state: {
       globalFilter,
-      columnPinning: {
-        left: [firstColumnId], 
-      },
+      columnPinning: { left: [firstColumnId] },
     },
     onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
@@ -63,104 +48,75 @@ export default function Table() {
   });
 
   const handleDownloadExcel = async () => {
-    const query = `${root}/getFile?path=${excelDownloadPath}`;
-  try {
-    console.log("Query: ", query);
-    const response = await axios.get(query, {
-      responseType: "blob",
-    });
-    console.log("[handleDownloadExcel] File Response :" , response)
-    const FileUrl = response.config.url;
-    const splittedUrl = FileUrl.split('/')
-    const filename = splittedUrl[splittedUrl.length-1]
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", filename); // Set your desired file name
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  } catch (e) {
-    const errorMessage = e.response?.data?.message;
-    console.log("Error from getExcelFile : ", e);
-    console.log("Error Message from getExcelFile : ", errorMessage);
-  }
+    try {
+      const query = `${root}/getFile?path=${excelDownloadPath}`;
+      const response = await axios.get(query, { responseType: "blob" });
+
+      const filename = query.split("/").pop();
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename || "data.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (e) {
+      console.error("Excel download failed", e);
+    }
   };
 
   return (
-    <div style={{ overflowX: "auto"}}>
-      <VisitTracker page={"result"} />
-      {/* fix this part on the screen */}
-      <div className="key_Point_Container">
-        {model1Path && (
-          <KeyPoint mainPoint="Model 1 Path " description={model1Path} />
-        )}
-        {model1SW && (
-          <KeyPoint mainPoint="Model 1 SW " description={model1SW} />
-        )}
-        {
+    <div style={{ overflowX: "auto" }}>
+      <VisitTracker page="result" />
+
+      {/* Fixed Header Section */}
+      <div style={{ position: "sticky", top: 0, background: "#fff", zIndex: 5 }}>
+        {model1CL != null && (
           <KeyPoint
-          mainPoint="Model 1 CL "
-          description={model1CL == 0 ? "Latest" : model1CL}
+            mainPoint="Model 1 CL"
+            description={model1CL === 0 ? "Latest" : model1CL}
           />
-        }
-        {model2Path && (
-          <KeyPoint mainPoint="Model 2 Path " description={model2Path} />
         )}
-        {model2SW && (
-          <KeyPoint mainPoint="Model 2 SW " description={model2SW} />
-        )}
+
         {model2CL != null && (
           <KeyPoint
-          mainPoint="Model 2 CL "
-          description={model2CL == 0 ? "Latest" : model2CL}
+            mainPoint="Model 2 CL"
+            description={model2CL === 0 ? "Latest" : model2CL}
           />
         )}
-        {prefix && <KeyPoint mainPoint="Prefix " description={prefix} />}
-        {reference && (
-          <KeyPoint mainPoint="Reference " description={reference} />
-        )}
-      </div>
-      <div className={styles.search_and_download_container}>
+
         <input
           className={styles.searchInput}
           value={globalFilter ?? ""}
-          onChange={(e) => setGlobalFilter(String(e.target.value))}
+          onChange={(e) => setGlobalFilter(e.target.value)}
           placeholder="Search FMS KEY..."
-          />
-        <div>
-          <CardButton label={"Download Excel"} buttonColor={"green"} onClick={handleDownloadExcel} />
-        </div>
+        />
+
+        <CardButton
+          label="Download Excel"
+          buttonColor="green"
+          onClick={handleDownloadExcel}
+        />
       </div>
-      {/* fix this part on the screen */}
 
-      <table
-        style={{
-          borderCollapse: "collapse",
-          width: "100%",
-          minWidth: "1000px",
-          fontFamily: "sans-serif",
-          fontSize: "14px",
-          backgroundColor: "white",
-        }}
-      >
+      {/* Table */}
+      <table style={{ minWidth: "1000px", width: "100%", borderCollapse: "collapse" }}>
         <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => {
-                const isPinned = header.column.getIsPinned();
-
+          {table.getHeaderGroups().map((hg) => (
+            <tr key={hg.id}>
+              {hg.headers.map((header) => {
+                const pinned = header.column.getIsPinned();
                 return (
                   <th
                     key={header.id}
                     style={{
+                      position: pinned ? "sticky" : "static",
+                      left: pinned ? 0 : undefined,
+                      zIndex: pinned ? 3 : 1,
+                      background: "#f9f9f9",
                       border: "1px solid #ccc",
                       padding: "8px",
-                      textAlign: "left",
-                      backgroundColor: "#f9f9f9",
-                      position: isPinned ? "sticky" : "static",
-                      left: isPinned ? 0 : undefined,
-                      zIndex: isPinned ? 3 : 1,
                     }}
                   >
                     {flexRender(
@@ -178,24 +134,20 @@ export default function Table() {
           {table.getRowModel().rows.map((row) => (
             <tr key={row.id}>
               {row.getVisibleCells().map((cell) => {
-                const isPinned = cell.column.getIsPinned();
-
-                const overrideColor = row.original.colors?.includes(
-                  cell.column.id
-                )
-                  ? "lightpink"
-                  : "white";
+                const pinned = cell.column.getIsPinned();
+                const highlight =
+                  row.original?.colors?.includes(cell.column.id);
 
                 return (
                   <td
                     key={cell.id}
                     style={{
+                      position: pinned ? "sticky" : "static",
+                      left: pinned ? 0 : undefined,
+                      zIndex: pinned ? 2 : 1,
+                      background: highlight ? "lightpink" : "white",
                       border: "1px solid #ddd",
                       padding: "8px",
-                      backgroundColor: overrideColor,
-                      position: isPinned ? "sticky" : "static",
-                      left: isPinned ? 0 : undefined,
-                      zIndex: isPinned ? 2 : 1,
                     }}
                   >
                     {flexRender(
