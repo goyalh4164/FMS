@@ -1,36 +1,191 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+"use client";
+// import { DataRows as Data } from "@/utils/Data";
 
-## Getting Started
+import {
+  createColumnHelper,
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+  getFilteredRowModel,
+} from "@tanstack/react-table";
 
-First, run the development server:
+// import { headers as column_heading } from "@/utils/Data";
+import { useState } from "react";
+import styles from "./page.module.css";
+import { useUser } from "../context/UserContext";
+import KeyPoint from "@/components/KeyPoint/KeyPoint";
+import CardButton from "@/components/CardButton/CardButton";
+import axios from "axios";
+import { root } from "@/server-config";
+import VisitTracker from "@/components/VisitTracker/VisitTracker";
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+export default function Table() {
+  const {
+    excelDownloadPath,
+    fmsTable,
+    model1Path,
+    model1SW,
+    model1CL,
+    model2Path,
+    model2SW,
+    model2CL,
+    prefix,
+    reference,
+  } = useUser();
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+  const { HEADERS: column_heading, DATA_ROWS_AFTER_COLORING: Data } = fmsTable;
+  console.log(excelDownloadPath);
+  console.log("column_heading : ", column_heading, "Data : ", Data);
+  const [globalFilter, setGlobalFilter] = useState("");
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+  const columns = [];
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+  for (let i = 0; i < column_heading.length; i++) {
+    let obj = {};
+    obj.accessorKey = column_heading[i];
+    obj.header = column_heading[i];
+    columns.push(obj);
+  }
 
-## Learn More
+  const table = useReactTable({
+    data: Data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    state: {
+      globalFilter,
+    },
+    onGlobalFilterChange: setGlobalFilter,
+  });
 
-To learn more about Next.js, take a look at the following resources:
+  const handleDownloadExcel = async () => {
+    const query = `${root}/getFile?path=${excelDownloadPath}`;
+  try {
+    console.log("Query: ", query);
+    const response = await axios.get(query, {
+      responseType: "blob",
+    });
+    console.log("[handleDownloadExcel] File Response :" , response)
+    const FileUrl = response.config.url;
+    const splittedUrl = FileUrl.split('/')
+    const filename = splittedUrl[splittedUrl.length-1]
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename); // Set your desired file name
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch (e) {
+    const errorMessage = e.response?.data?.message;
+    console.log("Error from getExcelFile : ", e);
+    console.log("Error Message from getExcelFile : ", errorMessage);
+  }
+  };
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+  return (
+    <div style={{ overflowX: "auto"}}>
+      <VisitTracker page={"result"} />
+      <div className="key_Point_Container">
+        {model1Path && (
+          <KeyPoint mainPoint="Model 1 Path " description={model1Path} />
+        )}
+        {model1SW && (
+          <KeyPoint mainPoint="Model 1 SW " description={model1SW} />
+        )}
+        {
+          <KeyPoint
+            mainPoint="Model 1 CL "
+            description={model1CL == 0 ? "Latest" : model1CL}
+          />
+        }
+        {model2Path && (
+          <KeyPoint mainPoint="Model 2 Path " description={model2Path} />
+        )}
+        {model2SW && (
+          <KeyPoint mainPoint="Model 2 SW " description={model2SW} />
+        )}
+        {model2CL != null && (
+          <KeyPoint
+            mainPoint="Model 2 CL "
+            description={model2CL == 0 ? "Latest" : model2CL}
+          />
+        )}
+        {prefix && <KeyPoint mainPoint="Prefix " description={prefix} />}
+        {reference && (
+          <KeyPoint mainPoint="Reference " description={reference} />
+        )}
+      </div>
+      <div className={styles.search_and_download_container}>
+        <input
+          className={styles.searchInput}
+          value={globalFilter ?? ""}
+          onChange={(e) => setGlobalFilter(String(e.target.value))}
+          placeholder="Search FMS KEY..."
+        />
+        <div>
+          <CardButton label={"Download Excel"} buttonColor={"green"} onClick={handleDownloadExcel} />
+        </div>
+      </div>
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+      <table
+        style={{
+          borderCollapse: "collapse",
+          width: "100%",
+          fontFamily: "sans-serif",
+          fontSize: "14px",
+          backgroundColor:"white"
+        }}
+      >
+        <thead>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <tr key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <th
+                  key={header.id}
+                  style={{
+                    border: "1px solid #ccc",
+                    padding: "8px",
+                    textAlign: "left",
+                    backgroundColor: "#f9f9f9",
+                  }}
+                >
+                  {flexRender(
+                    header.column.columnDef.header,
+                    header.getContext()
+                  )}
+                </th>
+              ))}
+            </tr>
+          ))}
+        </thead>
+        <tbody>
+          {table.getRowModel().rows.map((row) => (
+            <tr key={row.id}>
+              {row.getVisibleCells().map((cell) => {
+                const overrideColor = row.original.colors.includes(
+                  cell.column.id
+                )
+                  ? "lightpink"
+                  : "light-red";
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+                return (
+                  <td
+                    key={cell.id}
+                    style={{
+                      border: "1px solid #ddd",
+                      padding: "8px",
+                      backgroundColor: overrideColor,
+                    }}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
