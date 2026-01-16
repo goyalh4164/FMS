@@ -1,0 +1,62 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { root, ui_root } from "@/server-config";
+
+export default function UsageStats() {
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    axios
+      .get(`${ui_root}/track`)
+      .then((res) => setStats(res.data))
+      .catch(() => {});
+  }, []);
+
+  console.log("STATS : ", stats);
+  // {"today":23,"last7Days":23,"last30Days":23}
+  if (!stats) return null;
+
+  const {page : highestVisitedPage} = stats.highestUsagePage;
+  return (
+    <div style={wrapperStyle}>
+      <div style={cardStyle}>
+        <h3>📊 Website Usage</h3>
+
+        <p>
+          👤 <b>Today:</b> {stats.today}
+        </p>
+        <p>
+          📅 <b>Last 7 Days:</b> {stats.last7Days}
+        </p>
+        <p>
+          🗓️ <b>Last 30 Days:</b> {stats.last30Days}
+        </p>
+
+        <hr />
+
+        <p>
+          🔥 <b>Highest Usage Page:</b>
+        </p>
+        <p>{String(highestVisitedPage).charAt(0).toUpperCase() + String(highestVisitedPage).slice(1)  }</p>
+      </div>
+    </div>
+  );
+}
+
+const wrapperStyle = {
+  position: "fixed",
+  top: "16px",
+  right: "16px",
+  zIndex: 1000,
+};
+
+const cardStyle = {
+  padding: "18px",
+  borderRadius: "14px",
+  background: "#f6f4ff",
+  color: "#333",
+  width: "260px",
+  boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+};
