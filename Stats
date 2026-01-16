@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { root, ui_root } from "@/server-config";
+import { ui_root } from "@/server-config";
 
 export default function UsageStats() {
   const [stats, setStats] = useState(null);
@@ -14,35 +14,32 @@ export default function UsageStats() {
       .catch(() => {});
   }, []);
 
-  console.log("STATS : ", stats);
-  // {"today":23,"last7Days":23,"last30Days":23}
   if (!stats) return null;
 
-  const {page : highestVisitedPage} = stats.highestUsagePage;
   return (
     <div style={wrapperStyle}>
       <div style={cardStyle}>
-        <h3>📊 Website Usage</h3>
-
-        <p>
-          👤 <b>Today:</b> {stats.today}
-        </p>
-        <p>
-          📅 <b>Last 7 Days:</b> {stats.last7Days}
-        </p>
-        <p>
-          🗓️ <b>Last 30 Days:</b> {stats.last30Days}
-        </p>
-
-        <hr />
-
-        <p>
-          🔥 <b>Highest Usage Page:</b>
-        </p>
-        <p>{String(highestVisitedPage).charAt(0).toUpperCase() + String(highestVisitedPage).slice(1)  }</p>
+        <StatItem label="Today" value={stats.today} />
+        <Divider />
+        <StatItem label="Last 7 Days" value={stats.last7Days} />
+        <Divider />
+        <StatItem label="Last 30 Days" value={stats.last30Days} />
       </div>
     </div>
   );
+}
+
+function StatItem({ label, value }) {
+  return (
+    <div style={statItemStyle}>
+      <div style={labelStyle}>{label}</div>
+      <div style={valueStyle}>{value}</div>
+    </div>
+  );
+}
+
+function Divider() {
+  return <div style={dividerStyle} />;
 }
 
 const wrapperStyle = {
@@ -53,10 +50,36 @@ const wrapperStyle = {
 };
 
 const cardStyle = {
-  padding: "18px",
+  display: "flex",
+  alignItems: "center",
+  gap: "14px",
+  padding: "14px 18px",
   borderRadius: "14px",
   background: "#f6f4ff",
   color: "#333",
-  width: "260px",
   boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+};
+
+const statItemStyle = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  minWidth: "80px",
+};
+
+const labelStyle = {
+  fontSize: "12px",
+  color: "#666",
+  marginBottom: "4px",
+};
+
+const valueStyle = {
+  fontSize: "18px",
+  fontWeight: "600",
+};
+
+const dividerStyle = {
+  height: "36px",
+  width: "1px",
+  background: "#ddd",
 };
