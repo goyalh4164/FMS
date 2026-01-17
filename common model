@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useMemo } from "react";
 import SelectInput from "../SelectInput/SelectInput";
 import RadioGroup from "../RadioGroup/RadioGroup";
 import TextInput from "../TextInput/TextInput";
@@ -21,99 +22,93 @@ export default function CommonInputCard({ Heading, index, onDataChange }) {
   const [chipsetOptions, setChipsetOptions] = useState([]);
   const [pathOfSoftwareModel, setPathOfSoftwareModel] = useState("");
   const [pathForChipset, setPathForChipset] = useState("");
-  const [deltaPath, setDeltaPath] = useState("");
   const [loadingProduct, setLoadingProduct] = useState(false);
   const [loadingChipset, setLoadingChipset] = useState(false);
 
-  // Handle Branch blur → triggers chipset load
+  /* ------------------ Branch Blur ------------------ */
   const handleBranchBlur = async (value) => {
-    if (lastBranch === value) return;
+    if (!value || lastBranch === value) return;
+
     setBranch(value);
+    setLastBranch(value);
     setLoadingProduct(true);
     setProduct("");
     setChipset("");
     setProductOptions([]);
     setChipsetOptions([]);
+
     try {
-      // setTimeout(() => setLoadingChipset(false), 1500);
-      if (value.length == 0) return;
-      setLastBranch(value);
-      console.log(`${root}/getProducts?path=${value}`);
       const response = await axios.get(`${root}/getProducts?path=${value}`);
-      console.log(response);
       const { path, dir_names } = response.data.data;
+
       setPathForChipset(path);
-      let products = [];
-      for (let i = 0; i < dir_names.length; i++) {
-        let product_ = {};
-        product_.value = dir_names[i];
-        product_.label = dir_names[i];
-        products.push(product_);
-      }
-      console.log("PRODUCTS : ", products);
-      setProductOptions(products);
+
+      setProductOptions(
+        dir_names.map((d) => ({ value: d, label: d }))
+      );
     } catch (e) {
       toast.error("Invalid Branch Path");
-      console.log("Unable to fetch Product");
-      console.log("Error :", e.message);
     } finally {
       setLoadingProduct(false);
     }
   };
 
+  /* ------------------ Product Change ------------------ */
   const handleProductChange = async (value) => {
-    if (value.length == 0) return;
+    if (!value) return;
+
     setProduct(value);
     setChipset("");
     setLoadingChipset(true);
-    console.log("PRODUCT_VALUE ", value);
+
     try {
-      console.log(
-        "path for chipset calling",
-        `${root}/getChipsets?path=${pathForChipset}${value}`
-      );
       const response = await axios.get(
         `${root}/getChipsets?path=${pathForChipset}${value}`
       );
+
       const { path, dir_names } = response.data.data;
       setPathOfSoftwareModel(path);
-      let chipsetModelsData = [];
-      for (let i = 0; i < dir_names.length; i++) {
-        let chipsetModel_ = {};
-        chipsetModel_.value = dir_names[i];
-        chipsetModel_.label = dir_names[i];
-        chipsetModelsData.push(chipsetModel_);
-      }
-      setChipsetOptions(chipsetModelsData);
+
+      setChipsetOptions(
+        dir_names.map((d) => ({ value: d, label: d }))
+      );
     } catch (e) {
       toast.error("Unable to fetch chipset models");
-      console.log("Unable to fetch chipset models");
-      console.log("Error :", e.message);
     } finally {
       setLoadingChipset(false);
     }
   };
 
+  /* ------------------ Chipset ------------------ */
   const handleChipsetChange = (value) => setChipset(value);
 
-  // Final Card Data
-  const cardData = {
+  /* ------------------ DERIVED deltaPath (FIX) ------------------ */
+  const deltaPath = useMemo(() => {
+    if (!pathOfSoftwareModel || !chipset) return "";
+    return `${pathOfSoftwareModel}${chipset}/`;
+  }, [pathOfSoftwareModel, chipset]);
+
+  /* ------------------ Notify Parent ------------------ */
+  useEffect(() => {
+    const cardData = {
+      branch,
+      product,
+      chipset,
+      changelistType,
+      changelistNumber:
+        changelistType === "specific" ? changelistNumber : null,
+      deltaPath,
+    };
+
+    onDataChange?.(index, cardData);
+  }, [
     branch,
     product,
     chipset,
     changelistType,
-    changelistNumber: changelistType === "specific" ? changelistNumber : null,
+    changelistNumber,
     deltaPath,
-  };
-
-  // Notify parent whenever cardData changes
-  useEffect(() => {
-    console.log(" cardData : ", cardData);
-    console.log("pathOfSoftwareModel : ", pathOfSoftwareModel);
-    console.log("chipset : ", chipset);
-    setDeltaPath(`${pathOfSoftwareModel}${chipset}/`);
-    onDataChange?.(index, cardData);
-  }, [branch, product, chipset, changelistType, changelistNumber]);
+  ]);
 
   return (
     <div
@@ -132,16 +127,18 @@ export default function CommonInputCard({ Heading, index, onDataChange }) {
         defaultValue={branch}
         onBlur={handleBranchBlur}
       />
-      <p style={{ marginTop: "0px", fontSize: "0.77em", color: "blue" }}>
-        {"***Enter the branch path just before [ feature-config-data ]'"}
+      <p style={{ marginTop: 0, fontSize: "0.77em", color: "blue" }}>
+        ***Enter the branch path just before [ feature-config-data ]
       </p>
+
+      {/* Product */}
       <SelectInput
         id={`product-${index}`}
         label="Product"
         value={product}
         onChange={handleProductChange}
         loading={loadingProduct}
-        disabled={!branch || productOptions.length == 0}
+        disabled={!branch || productOptions.length === 0}
         options={productOptions}
       />
 
@@ -152,7 +149,7 @@ export default function CommonInputCard({ Heading, index, onDataChange }) {
         value={chipset}
         loading={loadingChipset}
         onChange={handleChipsetChange}
-        disabled={chipsetOptions.length == 0}
+        disabled={chipsetOptions.length === 0}
         options={chipsetOptions}
       />
 
@@ -175,7 +172,7 @@ export default function CommonInputCard({ Heading, index, onDataChange }) {
         ]}
       />
 
-      {/* Show specific changelist input */}
+      {/* Specific Changelist */}
       <SmoothWrapper show={changelistType === "specific"}>
         <TextInput
           id={`changelist-number-${index}`}
