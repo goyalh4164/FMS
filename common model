@@ -1,0 +1,190 @@
+"use client";
+import { useState, useEffect } from "react";
+import SelectInput from "../SelectInput/SelectInput";
+import RadioGroup from "../RadioGroup/RadioGroup";
+import TextInput from "../TextInput/TextInput";
+import SmoothWrapper from "../SmoothWrapper/SmoothWrapper";
+import styles from "./CommonInputCard.module.css";
+import { root } from "@/server-config";
+import axios from "axios";
+import { toast } from "react-toastify";
+import Colors from "@/constants/Colors";
+
+export default function CommonInputCard({ Heading, index, onDataChange }) {
+  const [branch, setBranch] = useState("");
+  const [lastBranch, setLastBranch] = useState("");
+  const [product, setProduct] = useState("");
+  const [productOptions, setProductOptions] = useState([]);
+  const [chipset, setChipset] = useState("");
+  const [changelistType, setChangelistType] = useState("latest");
+  const [changelistNumber, setChangelistNumber] = useState("");
+  const [chipsetOptions, setChipsetOptions] = useState([]);
+  const [pathOfSoftwareModel, setPathOfSoftwareModel] = useState("");
+  const [pathForChipset, setPathForChipset] = useState("");
+  const [deltaPath, setDeltaPath] = useState("");
+  const [loadingProduct, setLoadingProduct] = useState(false);
+  const [loadingChipset, setLoadingChipset] = useState(false);
+
+  // Handle Branch blur → triggers chipset load
+  const handleBranchBlur = async (value) => {
+    if (lastBranch === value) return;
+    setBranch(value);
+    setLoadingProduct(true);
+    setProduct("");
+    setChipset("");
+    setProductOptions([]);
+    setChipsetOptions([]);
+    try {
+      // setTimeout(() => setLoadingChipset(false), 1500);
+      if (value.length == 0) return;
+      setLastBranch(value);
+      console.log(`${root}/getProducts?path=${value}`);
+      const response = await axios.get(`${root}/getProducts?path=${value}`);
+      console.log(response);
+      const { path, dir_names } = response.data.data;
+      setPathForChipset(path);
+      let products = [];
+      for (let i = 0; i < dir_names.length; i++) {
+        let product_ = {};
+        product_.value = dir_names[i];
+        product_.label = dir_names[i];
+        products.push(product_);
+      }
+      console.log("PRODUCTS : ", products);
+      setProductOptions(products);
+    } catch (e) {
+      toast.error("Invalid Branch Path");
+      console.log("Unable to fetch Product");
+      console.log("Error :", e.message);
+    } finally {
+      setLoadingProduct(false);
+    }
+  };
+
+  const handleProductChange = async (value) => {
+    if (value.length == 0) return;
+    setProduct(value);
+    setChipset("");
+    setLoadingChipset(true);
+    console.log("PRODUCT_VALUE ", value);
+    try {
+      console.log(
+        "path for chipset calling",
+        `${root}/getChipsets?path=${pathForChipset}${value}`
+      );
+      const response = await axios.get(
+        `${root}/getChipsets?path=${pathForChipset}${value}`
+      );
+      const { path, dir_names } = response.data.data;
+      setPathOfSoftwareModel(path);
+      let chipsetModelsData = [];
+      for (let i = 0; i < dir_names.length; i++) {
+        let chipsetModel_ = {};
+        chipsetModel_.value = dir_names[i];
+        chipsetModel_.label = dir_names[i];
+        chipsetModelsData.push(chipsetModel_);
+      }
+      setChipsetOptions(chipsetModelsData);
+    } catch (e) {
+      toast.error("Unable to fetch chipset models");
+      console.log("Unable to fetch chipset models");
+      console.log("Error :", e.message);
+    } finally {
+      setLoadingChipset(false);
+    }
+  };
+
+  const handleChipsetChange = (value) => setChipset(value);
+
+  // Final Card Data
+  const cardData = {
+    branch,
+    product,
+    chipset,
+    changelistType,
+    changelistNumber: changelistType === "specific" ? changelistNumber : null,
+    deltaPath,
+  };
+
+  // Notify parent whenever cardData changes
+  useEffect(() => {
+    console.log(" cardData : ", cardData);
+    console.log("pathOfSoftwareModel : ", pathOfSoftwareModel);
+    console.log("chipset : ", chipset);
+    setDeltaPath(`${pathOfSoftwareModel}${chipset}/`);
+    onDataChange?.(index, cardData);
+  }, [branch, product, chipset, changelistType, changelistNumber]);
+
+  return (
+    <div
+      className={styles.container}
+      style={{ backgroundColor: Colors.cardBackgroundColor }}
+    >
+      <div className={styles.heading_container}>
+        <h1>{Heading}</h1>
+      </div>
+
+      {/* Branch */}
+      <TextInput
+        id={`branch-${index}`}
+        label="Branch"
+        placeholder="Enter Branch"
+        defaultValue={branch}
+        onBlur={handleBranchBlur}
+      />
+      <p style={{ marginTop: "0px", fontSize: "0.77em", color: "blue" }}>
+        {"***Enter the branch path just before [ feature-config-data ]'"}
+      </p>
+      <SelectInput
+        id={`product-${index}`}
+        label="Product"
+        value={product}
+        onChange={handleProductChange}
+        loading={loadingProduct}
+        disabled={!branch || productOptions.length == 0}
+        options={productOptions}
+      />
+
+      {/* Chipset */}
+      <SelectInput
+        id={`chipset-${index}`}
+        label="Chipset"
+        value={chipset}
+        loading={loadingChipset}
+        onChange={handleChipsetChange}
+        disabled={chipsetOptions.length == 0}
+        options={chipsetOptions}
+      />
+
+      {/* Changelist */}
+      <RadioGroup
+        name={`changelist-${index}`}
+        value={changelistType}
+        onChange={setChangelistType}
+        options={[
+          {
+            id: `latest-cl-${index}`,
+            label: "Latest Changelist",
+            value: "latest",
+          },
+          {
+            id: `specific-cl-${index}`,
+            label: "Specific Changelist",
+            value: "specific",
+          },
+        ]}
+      />
+
+      {/* Show specific changelist input */}
+      <SmoothWrapper show={changelistType === "specific"}>
+        <TextInput
+          id={`changelist-number-${index}`}
+          label="Changelist"
+          placeholder="Enter Changelist"
+          value={changelistNumber}
+          onChange={setChangelistNumber}
+        />
+      </SmoothWrapper>
+    </div>
+  );
+}
