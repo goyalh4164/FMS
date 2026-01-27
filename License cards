@@ -1,0 +1,283 @@
+import formStyles from "../styles/formStyles";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import InputField from "../components/InputField";
+import Button from "../components/Button";
+import Dropdown from "../components/InputDropDownMenu";
+import CLSelector from "../components/CLSelector";
+import getChipsets from "../apiCalls/getChipsets";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import FullScreenLoader from "../components/FullScreenLoader";
+import getSuffixesAndPrefixes from "../apiCalls/getModelPrefixesAndSuffixes";
+import getLicenseComparision from "../apiCalls/getLicenseComparision";
+import getProducts from "../apiCalls/getProducts";
+
+const LicenseModelComparatorPage = ({ selectedOption, onBack }) => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  //first user input
+  let [model1, SetModel1] = useState("");
+
+  // last user branch input state
+  let [lastmodel1, SetLastModel1] = useState("");
+
+  // path returned after chipset
+  let [deltaPath1, setDeltaPath1] = useState("");
+
+  // path returned after chipset
+  let [finalDeltaPath1, setFinalDeltaPath1] = useState("");
+
+  // model chipsets
+  let [chipsets_model1, SetChipsets_model1] = useState([]);
+  //selected chipset
+  let [selectedChipset1, SetSelectedChipset1] = useState("");
+  // chipsets loading state
+  let [chipset1loading, SetChipset1Loading] = useState(false);
+
+  // model prefixes
+  let [prefixes_model1, SetPrefixes_model1] = useState([]);
+  // Selected prefix
+  let [selected_model1_prefix, Set_selected_model1_prefix] = useState("");
+  // model1_prefix_loading
+  let [model1_prefix_loading, Set_model1_prefix_loading] = useState(false);
+
+  // model suffix
+  let [suffixs_model1, SetSuffixs_model1] = useState([]);
+  // Selected prefix
+  let [selected_model1_suffix, Set_selected_model1_suffix] = useState("");
+
+  // model1_suffix_loading
+  let [model1_suffix_loading, Set_model1_suffix_loading] = useState(false);
+
+  //selected CLs
+  let [selectedCL1, SetSelectedCL1] = useState(0);
+
+  // complete page loading
+  let [completepageloading, SetCompletePageLoading] = useState(false);
+
+  //product 1 addition
+  let [products_model1, SetProducts_model1] = useState([]);
+  let [selectedProduct1, SetSelectedProduct1] = useState("");
+  let [product1loading, SetProduct1Loading] = useState(false);
+
+  useEffect(() => {
+    SetChipsets_model1([]);
+    SetSelectedChipset1("");
+
+    if (selectedProduct1.length !== 0) {
+      SetChipset1Loading(true);
+      const populate_models = async () => {
+        try {
+          const { chipsets, file_path } = await getChipsets(
+            `${deltaPath1}${selectedProduct1}/`
+          );
+          setFinalDeltaPath1(file_path);
+          console.log(
+            "path after selecting the product of model1 : ",
+            file_path
+          );
+          SetChipsets_model1(chipsets);
+        } catch (e) {
+          toast(e);
+          console.log(e);
+        } finally {
+          SetChipset1Loading(false);
+        }
+      };
+      populate_models();
+    }
+  }, [selectedProduct1]);
+
+  useEffect(() => {
+    SetPrefixes_model1([]);
+    SetSuffixs_model1([]);
+    Set_selected_model1_prefix("");
+    Set_selected_model1_suffix("");
+    if (selectedChipset1.length !== 0) {
+      Set_model1_prefix_loading(true);
+      Set_model1_suffix_loading(true);
+      const populate_models = async () => {
+        try {
+          console.log(
+            "Calling path for getting the prefix and sufix : ",
+            deltaPath1
+          );
+          const { prefixes, suffixes } = await getSuffixesAndPrefixes(
+            `${finalDeltaPath1}${selectedChipset1}/`
+          );
+          SetPrefixes_model1(prefixes);
+          SetSuffixs_model1(suffixes);
+        } catch (e) {
+          toast(e);
+          console.log(e);
+        } finally {
+          Set_model1_prefix_loading(false);
+          Set_model1_suffix_loading(false);
+        }
+      };
+      populate_models();
+    }
+  }, [selectedChipset1]);
+
+  useEffect(() => {
+    let current_path_1 = finalDeltaPath1;
+    if (current_path_1.endsWith("/") === false) current_path_1 += "/";
+    setFinalDeltaPath1(current_path_1);
+  }, [finalDeltaPath1]);
+
+  const handleSubmit = async () => {
+    const payload = {
+      delta_path: `${finalDeltaPath1}${selectedChipset1}/`,
+      model_prefix: selected_model1_prefix,
+      model_suffix: selected_model1_suffix,
+      changelist: selectedCL1 === "" ? 0 : selectedCL1,
+      has_reference: true,
+    };
+    //printing the payload
+    console.log(payload);
+
+    try {
+      setLoading(true);
+      SetCompletePageLoading(true);
+      const response = await getLicenseComparision(payload);
+      console.log(response);
+      navigate("/tableref", {
+        state: {
+          Data: response.Data,
+          Table_Column_Count: response.cols,
+          file_path: response.file_path,
+          isLicensePage: true,
+          model1_path: `${finalDeltaPath1}${selectedChipset1}`,
+          prefix: selected_model1_prefix,
+          suffix: selected_model1_suffix,
+          changelist_1: selectedCL1 === 0 ? "Latest" : selectedCL1,
+        },
+      });
+    } catch (e) {
+      toast.error("No such File exist with the given CL");
+    } finally {
+      setLoading(false);
+      SetCompletePageLoading(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "100vh",
+        fontFamily: "Segoe UI",
+        justifyContent: "space-evenly",
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      }}
+    >
+      <FullScreenLoader loading={completepageloading} />
+      <ToastContainer />
+      <div style={formStyles.container}>
+        <div style={formStyles.formWrapper}>
+          <h2 style={formStyles.title}>{selectedOption} Model</h2>
+          <div style={formStyles.form}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <InputField
+                label="Feature-config Package Path"
+                placeholder="//TIZEN/[Product2024]/[LICENSE_TV_2024_MP_Prj]/[INT]/PLATFORM/FEATURECONFIG/Feature-config/"
+                name={"model1"}
+                value={model1}
+                SetValue={SetModel1}
+                required={true}
+                type={"text"}
+                description_text={
+                  "***Enter the branch path just before [ feature-config-data ]' "
+                }
+                handleBlur={async () => {
+                  try {
+                    if (model1.length === 0) return;
+                    if (lastmodel1 === model1) return;
+                    SetLastModel1(model1);
+                    SetProduct1Loading(true);
+                    SetProducts_model1([]);
+                    SetSelectedProduct1("");
+                    const { products, file_path } = await getProducts(model1);
+                    setDeltaPath1(file_path);
+                    SetProducts_model1(products);
+                  } catch (e) {
+                    // alert(e);
+                    SetProducts_model1([]);
+                    console.log(e.message);
+                  } finally {
+                    SetProduct1Loading(false);
+                  }
+                }}
+              />
+            </div>
+
+            <Dropdown
+              title={"Product"}
+              current_page={"License"}
+              options={products_model1}
+              disabled={products_model1 && products_model1.length === 0}
+              selectedValue={selectedProduct1}
+              SetSelectedValue={SetSelectedProduct1}
+              loading={product1loading}
+            />
+
+            <Dropdown
+              title={"Chipset"}
+              current_page={"License"}
+              options={chipsets_model1}
+              disabled={chipsets_model1 && chipsets_model1.length === 0}
+              selectedValue={selectedChipset1}
+              SetSelectedValue={SetSelectedChipset1}
+              loading={chipset1loading}
+            />
+            <Dropdown
+              title={"Model"}
+              current_page={"License"}
+              options={prefixes_model1}
+              disabled={prefixes_model1 && prefixes_model1.length === 0}
+              selectedValue={selected_model1_prefix}
+              SetSelectedValue={Set_selected_model1_prefix}
+              loading={model1_prefix_loading}
+            />
+
+            <Dropdown
+              title={"Reference"}
+              current_page={"License"}
+              options={suffixs_model1}
+              disabled={suffixs_model1 && suffixs_model1.length === 0}
+              selectedValue={selected_model1_suffix}
+              SetSelectedValue={Set_selected_model1_suffix}
+              loading={model1_suffix_loading}
+            />
+
+            <CLSelector
+              name="changlist1"
+              value={selectedCL1}
+              setValue={SetSelectedCL1}
+            />
+          </div>
+        </div>
+      </div>
+      <div style={formStyles.buttonGroup}>
+        <div style={{ display: "flex", width: "15%" }}>
+          <Button title="Back" loading={loading} onClick={() => navigate(-1)} />
+        </div>
+
+        <div style={{ display: "flex", width: "15%" }}>
+          <Button title="Submit" loading={loading} onClick={handleSubmit} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default LicenseModelComparatorPage;
