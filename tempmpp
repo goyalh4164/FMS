@@ -1,0 +1,21 @@
+#!/bin/bash
+
+P4_PATH="//TIZEN/[Product2024]/[LICENSE_TV_2024_MP_Prj]/[INT]/"
+
+# List all files in the p4 path
+p4_files=$(p4 have "$P4_PATH"//...)
+
+# Filter for .po files and count occurrences of en_US.po and ca_ES.po
+en_us_count=$(echo "$p4_files" | grep -c "en_US.po")
+ca_es_count=$(echo "$p4_files" | grep -c "ca_ES.po")
+
+# Print results
+echo "Total en_US.po files: $en_us_count"
+echo "Total ca_ES.po files: $ca_es_count"
+
+# Print paths containing en_US.po and ca_ES.po
+echo -e "\nPaths containing en_US.po:"
+echo "$p4_files" | grep "en_US.po"
+
+echo -e "\nPaths containing ca_ES.po:"
+echo "$p4_files" | grep "ca_ES.po"
